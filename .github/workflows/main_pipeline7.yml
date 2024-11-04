@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - pipeline7
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to registry
+      uses: docker/login-action@v2
+      with:
+        registry: https://pipeline7.azurecr.io/
+        username: ${{ secrets.AzureAppService_ContainerUsername_666a5f0ce8d84c79b66a7b4261dbab18 }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_8da505fc82db454aa05c9b446f536238 }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: pipeline7.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_666a5f0ce8d84c79b66a7b4261dbab18 }}/password-generator:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'pipeline7'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_864be099cca245a7982922d156c661cd }}
+        images: 'pipeline7.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_666a5f0ce8d84c79b66a7b4261dbab18 }}/password-generator:${{ github.sha }}'
